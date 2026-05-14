@@ -1,6 +1,6 @@
 {
-  "name": "warter",
-  "description": "Be Warter, My Friend.",
+  "name": "water",
+  "description": "Unified personal configuration for AI agent clients. Be Water, My Friend.",
   "type": "module",
   "pi": {
     "extensions": [
