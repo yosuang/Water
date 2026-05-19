@@ -239,6 +239,8 @@ class BtwOverlay extends Container implements Focusable {
   private readonly getStatus: () => string;
   private readonly onSubmitCallback: (value: string) => void;
   private readonly onDismissCallback: () => void;
+  private isReplying = false;
+  private scrollOffset = 0;
   private _focused = false;
 
   get focused(): boolean {
@@ -247,7 +249,7 @@ class BtwOverlay extends Container implements Focusable {
 
   set focused(value: boolean) {
     this._focused = value;
-    this.input.focused = value;
+    this.input.focused = value && this.isReplying;
   }
 
   constructor(
@@ -273,6 +275,10 @@ class BtwOverlay extends Container implements Focusable {
 
     this.input = new Input();
     this.input.onSubmit = (value) => {
+      if (value.trim()) {
+        this.isReplying = false;
+        this.scrollOffset = 0;
+      }
       this.onSubmitCallback(value);
     };
     this.input.onEscape = () => {
@@ -286,11 +292,80 @@ class BtwOverlay extends Container implements Focusable {
       return;
     }
 
+    if (!this.isReplying) {
+      if (
+        this.keybindings.matches(data, "tui.select.confirm") ||
+        data === "\r" ||
+        data === "\n"
+      ) {
+        this.isReplying = true;
+        this.input.focused = this.focused;
+        this.tui.requestRender();
+        return;
+      }
+
+      if (
+        this.keybindings.matches(data, "tui.select.up") ||
+        this.keybindings.matches(data, "tui.editor.cursorUp") ||
+        data === "\x1b[A" ||
+        data === "\x1bOA"
+      ) {
+        this.scrollOffset += 1;
+        this.tui.requestRender();
+        return;
+      }
+
+      if (
+        this.keybindings.matches(data, "tui.select.down") ||
+        this.keybindings.matches(data, "tui.editor.cursorDown") ||
+        data === "\x1b[B" ||
+        data === "\x1bOB"
+      ) {
+        this.scrollOffset = Math.max(0, this.scrollOffset - 1);
+        this.tui.requestRender();
+        return;
+      }
+
+      if (
+        this.keybindings.matches(data, "tui.select.pageUp") ||
+        this.keybindings.matches(data, "tui.editor.pageUp") ||
+        data === "\x1b[5~"
+      ) {
+        this.scrollOffset += 8;
+        this.tui.requestRender();
+        return;
+      }
+
+      if (
+        this.keybindings.matches(data, "tui.select.pageDown") ||
+        this.keybindings.matches(data, "tui.editor.pageDown") ||
+        data === "\x1b[6~"
+      ) {
+        this.scrollOffset = Math.max(0, this.scrollOffset - 8);
+        this.tui.requestRender();
+        return;
+      }
+
+      if (
+        this.keybindings.matches(data, "tui.editor.cursorLineEnd") ||
+        data === "\x1b[F" ||
+        data === "\x1b[4~"
+      ) {
+        this.scrollOffset = 0;
+        this.tui.requestRender();
+        return;
+      }
+
+      return;
+    }
+
     this.input.handleInput(data);
   }
 
   setDraft(value: string): void {
     this.input.setValue(value);
+    this.isReplying = value.length > 0;
+    this.input.focused = this.focused && this.isReplying;
     this.tui.requestRender();
   }
 
@@ -317,16 +392,23 @@ class BtwOverlay extends Container implements Focusable {
     const dialogWidth = Math.max(56, Math.min(width, Math.floor(width * 0.9)));
     const innerWidth = Math.max(40, dialogWidth - 2);
     const terminalRows = process.stdout.rows ?? 30;
-    const dialogHeight = Math.max(
-      16,
-      Math.min(30, Math.floor(terminalRows * 0.75)),
-    );
-    const chromeHeight = 7;
-    const transcriptHeight = Math.max(6, dialogHeight - chromeHeight);
+    const overlayMaxHeight = Math.max(8, Math.floor(terminalRows * 0.78));
+    const dialogHeight = Math.min(30, overlayMaxHeight);
+    const chromeHeight = this.isReplying ? 9 : 7;
+    const transcriptHeight = Math.max(1, dialogHeight - chromeHeight);
 
     // Markdown renders to innerWidth already — no manual wrapping needed
     const transcript = this.getTranscript(innerWidth, this.theme);
-    const visibleTranscript = transcript.slice(-transcriptHeight);
+    const maxScroll = Math.max(0, transcript.length - transcriptHeight);
+    this.scrollOffset = Math.min(this.scrollOffset, maxScroll);
+    const transcriptStart = Math.max(
+      0,
+      transcript.length - transcriptHeight - this.scrollOffset,
+    );
+    const visibleTranscript = transcript.slice(
+      transcriptStart,
+      transcriptStart + transcriptHeight,
+    );
     const transcriptPadding = Math.max(
       0,
       transcriptHeight - visibleTranscript.length,
@@ -360,16 +442,28 @@ class BtwOverlay extends Container implements Focusable {
     }
 
     lines.push(this.theme.fg("borderMuted", `├${"─".repeat(innerWidth)}┤`));
-    lines.push(this.frameLine(this.theme.fg("warning", status), innerWidth));
-    lines.push(
-      `${this.theme.fg("borderMuted", "│")}${inputLine}${this.theme.fg("borderMuted", "│")}`,
-    );
-    lines.push(
-      this.frameLine(
-        this.theme.fg("dim", "Enter submit · Esc close"),
-        innerWidth,
-      ),
-    );
+    if (this.isReplying) {
+      lines.push(this.frameLine(this.theme.fg("warning", status), innerWidth));
+      lines.push(
+        `${this.theme.fg("borderMuted", "│")}${inputLine}${this.theme.fg("borderMuted", "│")}`,
+      );
+      lines.push(
+        this.frameLine(
+          this.theme.fg("dim", "Enter submit · Esc dismiss"),
+          innerWidth,
+        ),
+      );
+    } else {
+      lines.push(
+        this.frameLine(
+          this.theme.fg(
+            "dim",
+            `${status} · ↑/↓ to scroll · Enter to reply · Esc to dismiss`,
+          ),
+          innerWidth,
+        ),
+      );
+    }
     lines.push(this.borderLine(innerWidth, "bottom"));
 
     return lines;
@@ -488,7 +582,7 @@ export default function (pi: ExtensionAPI) {
     }
 
     const lines: string[] = [];
-    for (const item of thread.slice(-6)) {
+    for (const item of thread) {
       // User message
       const userText = item.question.trim().split("\n")[0];
       lines.push(
