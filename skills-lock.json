@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "skills": {
+    "commit": {
+      "source": "yosuang/Water",
+      "ref": "main",
+      "sourceType": "github",
+      "computedHash": "2a77ddd22cbaf7329f27609a40ca459b75683a0a1d390c5137efad6bde45450f"
+    },
+    "hunt": {
+      "source": "tw93/Waza",
+      "ref": "main",
+      "sourceType": "github",
+      "computedHash": "2680f88dc804db80412b85d6cf140b821216b74a5920873e0dc0dee505fa5cdf",
+      "claude-plugin": "waza"
+    },
+    "research": {
+      "source": "yosuang/Water",
+      "ref": "main",
+      "sourceType": "github",
+      "computedHash": "30374bb310ee0dc03a31800bfc68e23039abf7f286c5c42e74eef557c744da2c"
+    },
+    "think": {
+      "source": "tw93/Waza",
+      "ref": "main",
+      "sourceType": "github",
+      "computedHash": "942db63abe1351f81dbdcbcfcb4030ec6e30f41e577ab8e50246e39137f89b11",
+      "claude-plugin": "waza"
+    },
+    "write": {
+      "source": "tw93/Waza",
+      "ref": "main",
+      "sourceType": "github",
+      "computedHash": "c3089096f9f6c32f002cf6df3f1452e22b6695ed730deb6df87a0645184819da",
+      "claude-plugin": "waza"
+    }
+  }
+}
