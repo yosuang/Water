@@ -6,9 +6,6 @@
     "extensions": [
       "./extensions"
     ],
-    "skills": [
-      "./skills"
-    ],
     "prompts": [
       "./commands"
     ],
