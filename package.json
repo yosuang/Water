@@ -2,6 +2,10 @@
   "name": "water",
   "description": "Unified personal configuration for AI agent clients. Be Water, My Friend.",
   "type": "module",
+  "scripts": {
+    "check": "biome check --write --error-on-warnings . && tsgo --noEmit --skipLibCheck extensions/*.ts",
+    "prepare": "husky"
+  },
   "pi": {
     "extensions": [
       "./extensions"
@@ -17,5 +21,10 @@
     "@earendil-works/pi-coding-agent": "*",
     "@earendil-works/pi-ai": "*",
     "@earendil-works/pi-tui": "*"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.10",
+    "@typescript/native-preview": "^7.0.0-dev.20260519.1",
+    "husky": "^9.1.7"
   }
 }

@@ -1,31 +1,27 @@
+import type { ThinkingLevel as AiThinkingLevel, AssistantMessage, Message } from "@earendil-works/pi-ai";
 import {
+  type AgentSession,
+  type AgentSessionEvent,
   buildSessionContext,
   createAgentSession,
   createExtensionRuntime,
-  getMarkdownTheme,
-  SessionManager,
-  type AgentSession,
-  type AgentSessionEvent,
   type ExtensionAPI,
   type ExtensionCommandContext,
   type ExtensionContext,
+  getMarkdownTheme,
   type ResourceLoader,
+  SessionManager,
 } from "@earendil-works/pi-coding-agent";
 import {
-  type AssistantMessage,
-  type Message,
-  type ThinkingLevel as AiThinkingLevel,
-} from "@earendil-works/pi-ai";
-import {
   Container,
-  Input,
-  Markdown,
-  truncateToWidth,
-  visibleWidth,
   type Focusable,
+  Input,
   type KeybindingsManager,
+  Markdown,
   type OverlayHandle,
   type TUI,
+  truncateToWidth,
+  visibleWidth,
 } from "@earendil-works/pi-tui";
 
 const BTW_ENTRY_TYPE = "btw-thread-entry";
@@ -81,10 +77,7 @@ type ToolCallInfo = {
 
 function stripDynamicSystemPromptFooter(systemPrompt: string): string {
   return systemPrompt
-    .replace(
-      /\nCurrent date and time:[^\n]*(?:\nCurrent working directory:[^\n]*)?$/u,
-      "",
-    )
+    .replace(/\nCurrent date and time:[^\n]*(?:\nCurrent working directory:[^\n]*)?$/u, "")
     .replace(/\nCurrent working directory:[^\n]*$/u, "")
     .trim();
 }
@@ -127,29 +120,20 @@ function extractEventAssistantText(message: unknown): string {
   }
 
   const maybeMessage = message as { role?: unknown; content?: unknown };
-  if (
-    maybeMessage.role !== "assistant" ||
-    !Array.isArray(maybeMessage.content)
-  ) {
+  if (maybeMessage.role !== "assistant" || !Array.isArray(maybeMessage.content)) {
     return "";
   }
 
   return maybeMessage.content
     .filter((part): part is { type: "text"; text: string } => {
-      return (
-        !!part &&
-        typeof part === "object" &&
-        (part as { type?: unknown }).type === "text"
-      );
+      return !!part && typeof part === "object" && (part as { type?: unknown }).type === "text";
     })
     .map((part) => part.text)
     .join("\n")
     .trim();
 }
 
-function getLastAssistantMessage(
-  session: AgentSession,
-): AssistantMessage | null {
+function getLastAssistantMessage(session: AgentSession): AssistantMessage | null {
   for (let i = session.state.messages.length - 1; i >= 0; i--) {
     const message = session.state.messages[i];
     if (message.role === "assistant") {
@@ -160,10 +144,7 @@ function getLastAssistantMessage(
   return null;
 }
 
-function buildSeedMessages(
-  ctx: ExtensionContext,
-  thread: BtwDetails[],
-): Message[] {
+function buildSeedMessages(ctx: ExtensionContext, thread: BtwDetails[]): Message[] {
   const seed: Message[] = [];
 
   try {
@@ -171,9 +152,7 @@ function buildSeedMessages(
       ctx.sessionManager.getEntries(),
       ctx.sessionManager.getLeafId(),
     ).messages;
-    seed.push(
-      ...(contextMessages.filter((message) => "role" in message) as Message[]),
-    );
+    seed.push(...(contextMessages.filter((message) => "role" in message) as Message[]));
   } catch {
     // Ignore context seed failures and continue with an empty side thread.
   }
@@ -209,12 +188,7 @@ function buildSeedMessages(
 }
 
 function formatThread(thread: BtwDetails[]): string {
-  return thread
-    .map(
-      (item) =>
-        `User: ${item.question.trim()}\nAssistant: ${item.answer.trim()}`,
-    )
-    .join("\n\n---\n\n");
+  return thread.map((item) => `User: ${item.question.trim()}\nAssistant: ${item.answer.trim()}`).join("\n\n---\n\n");
 }
 
 function notify(
@@ -232,10 +206,7 @@ class BtwOverlay extends Container implements Focusable {
   private readonly tui: TUI;
   private readonly theme: ExtensionContext["ui"]["theme"];
   private readonly keybindings: KeybindingsManager;
-  private readonly getTranscript: (
-    width: number,
-    theme: ExtensionContext["ui"]["theme"],
-  ) => string[];
+  private readonly getTranscript: (width: number, theme: ExtensionContext["ui"]["theme"]) => string[];
   private readonly getStatus: () => string;
   private readonly onSubmitCallback: (value: string) => void;
   private readonly onDismissCallback: () => void;
@@ -256,10 +227,7 @@ class BtwOverlay extends Container implements Focusable {
     tui: TUI,
     theme: ExtensionContext["ui"]["theme"],
     keybindings: KeybindingsManager,
-    getTranscript: (
-      width: number,
-      theme: ExtensionContext["ui"]["theme"],
-    ) => string[],
+    getTranscript: (width: number, theme: ExtensionContext["ui"]["theme"]) => string[],
     getStatus: () => string,
     onSubmit: (value: string) => void,
     onDismiss: () => void,
@@ -293,11 +261,7 @@ class BtwOverlay extends Container implements Focusable {
     }
 
     if (!this.isReplying) {
-      if (
-        this.keybindings.matches(data, "tui.select.confirm") ||
-        data === "\r" ||
-        data === "\n"
-      ) {
+      if (this.keybindings.matches(data, "tui.select.confirm") || data === "\r" || data === "\n") {
         this.isReplying = true;
         this.input.focused = this.focused;
         this.tui.requestRender();
@@ -346,11 +310,7 @@ class BtwOverlay extends Container implements Focusable {
         return;
       }
 
-      if (
-        this.keybindings.matches(data, "tui.editor.cursorLineEnd") ||
-        data === "\x1b[F" ||
-        data === "\x1b[4~"
-      ) {
+      if (this.keybindings.matches(data, "tui.editor.cursorLineEnd") || data === "\x1b[F" || data === "\x1b[4~") {
         this.scrollOffset = 0;
         this.tui.requestRender();
         return;
@@ -382,10 +342,7 @@ class BtwOverlay extends Container implements Focusable {
   private borderLine(innerWidth: number, edge: "top" | "bottom"): string {
     const left = edge === "top" ? "┌" : "└";
     const right = edge === "top" ? "┐" : "┘";
-    return this.theme.fg(
-      "borderMuted",
-      `${left}${"─".repeat(innerWidth)}${right}`,
-    );
+    return this.theme.fg("borderMuted", `${left}${"─".repeat(innerWidth)}${right}`);
   }
 
   override render(width: number): string[] {
@@ -401,18 +358,9 @@ class BtwOverlay extends Container implements Focusable {
     const transcript = this.getTranscript(innerWidth, this.theme);
     const maxScroll = Math.max(0, transcript.length - transcriptHeight);
     this.scrollOffset = Math.min(this.scrollOffset, maxScroll);
-    const transcriptStart = Math.max(
-      0,
-      transcript.length - transcriptHeight - this.scrollOffset,
-    );
-    const visibleTranscript = transcript.slice(
-      transcriptStart,
-      transcriptStart + transcriptHeight,
-    );
-    const transcriptPadding = Math.max(
-      0,
-      transcriptHeight - visibleTranscript.length,
-    );
+    const transcriptStart = Math.max(0, transcript.length - transcriptHeight - this.scrollOffset);
+    const visibleTranscript = transcript.slice(transcriptStart, transcriptStart + transcriptHeight);
+    const transcriptPadding = Math.max(0, transcriptHeight - visibleTranscript.length);
 
     const status = this.getStatus();
 
@@ -423,14 +371,8 @@ class BtwOverlay extends Container implements Focusable {
 
     const lines = [
       this.borderLine(innerWidth, "top"),
-      this.frameLine(
-        this.theme.fg("accent", this.theme.bold(" BTW side chat ")),
-        innerWidth,
-      ),
-      this.frameLine(
-        this.theme.fg("dim", "Separate side conversation. Esc closes."),
-        innerWidth,
-      ),
+      this.frameLine(this.theme.fg("accent", this.theme.bold(" BTW side chat ")), innerWidth),
+      this.frameLine(this.theme.fg("dim", "Separate side conversation. Esc closes."), innerWidth),
       this.theme.fg("borderMuted", `├${"─".repeat(innerWidth)}┤`),
     ];
 
@@ -444,24 +386,11 @@ class BtwOverlay extends Container implements Focusable {
     lines.push(this.theme.fg("borderMuted", `├${"─".repeat(innerWidth)}┤`));
     if (this.isReplying) {
       lines.push(this.frameLine(this.theme.fg("warning", status), innerWidth));
-      lines.push(
-        `${this.theme.fg("borderMuted", "│")}${inputLine}${this.theme.fg("borderMuted", "│")}`,
-      );
-      lines.push(
-        this.frameLine(
-          this.theme.fg("dim", "Enter submit · Esc dismiss"),
-          innerWidth,
-        ),
-      );
+      lines.push(`${this.theme.fg("borderMuted", "│")}${inputLine}${this.theme.fg("borderMuted", "│")}`);
+      lines.push(this.frameLine(this.theme.fg("dim", "Enter submit · Esc dismiss"), innerWidth));
     } else {
       lines.push(
-        this.frameLine(
-          this.theme.fg(
-            "dim",
-            `${status} · ↑/↓ to scroll · Enter to reply · Esc to dismiss`,
-          ),
-          innerWidth,
-        ),
+        this.frameLine(this.theme.fg("dim", `${status} · ↑/↓ to scroll · Enter to reply · Esc to dismiss`), innerWidth),
       );
     }
     lines.push(this.borderLine(innerWidth, "bottom"));
@@ -513,18 +442,14 @@ export default function (pi: ExtensionAPI) {
     const a = args as Record<string, unknown>;
     switch (toolName) {
       case "bash":
-        return typeof a.command === "string"
-          ? truncateToWidth(a.command.split("\n")[0], 50, "…")
-          : "";
+        return typeof a.command === "string" ? truncateToWidth(a.command.split("\n")[0], 50, "…") : "";
       case "read":
       case "write":
       case "edit":
         return typeof a.path === "string" ? a.path : "";
       default: {
         const first = Object.values(a)[0];
-        return typeof first === "string"
-          ? truncateToWidth(first.split("\n")[0], 40, "…")
-          : "";
+        return typeof first === "string" ? truncateToWidth(first.split("\n")[0], 40, "…") : "";
       }
     }
   }
@@ -536,48 +461,25 @@ export default function (pi: ExtensionAPI) {
   ): string[] {
     const lines: string[] = [];
     for (const tc of toolCalls) {
-      const icon =
-        tc.status === "running" ? "⚙" : tc.status === "error" ? "✗" : "✓";
-      const color =
-        tc.status === "error"
-          ? "error"
-          : tc.status === "done"
-            ? "success"
-            : "dim";
-      const label =
-        theme.fg(color, `${icon} `) + theme.fg("toolTitle", tc.toolName);
+      const icon = tc.status === "running" ? "⚙" : tc.status === "error" ? "✗" : "✓";
+      const color = tc.status === "error" ? "error" : tc.status === "done" ? "success" : "dim";
+      const label = theme.fg(color, `${icon} `) + theme.fg("toolTitle", tc.toolName);
       const argsText = tc.args ? theme.fg("dim", ` ${tc.args}`) : "";
       lines.push(truncateToWidth(`  ${label}${argsText}`, width, ""));
     }
     return lines;
   }
 
-  function getTranscriptLines(
-    width: number,
-    theme: ExtensionContext["ui"]["theme"],
-  ): string[] {
+  function getTranscriptLines(width: number, theme: ExtensionContext["ui"]["theme"]): string[] {
     try {
       return getTranscriptLinesInner(width, theme);
     } catch (error) {
-      return [
-        theme.fg(
-          "error",
-          `Render error: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-      ];
+      return [theme.fg("error", `Render error: ${error instanceof Error ? error.message : String(error)}`)];
     }
   }
 
-  function getTranscriptLinesInner(
-    width: number,
-    theme: ExtensionContext["ui"]["theme"],
-  ): string[] {
-    if (
-      thread.length === 0 &&
-      !pendingQuestion &&
-      !pendingAnswer &&
-      !pendingError
-    ) {
+  function getTranscriptLinesInner(width: number, theme: ExtensionContext["ui"]["theme"]): string[] {
+    if (thread.length === 0 && !pendingQuestion && !pendingAnswer && !pendingError) {
       return [theme.fg("dim", "No BTW messages yet. Type a question below.")];
     }
 
@@ -585,10 +487,7 @@ export default function (pi: ExtensionAPI) {
     for (const item of thread) {
       // User message
       const userText = item.question.trim().split("\n")[0];
-      lines.push(
-        theme.fg("accent", theme.bold("You: ")) +
-          truncateToWidth(userText, width - 5, "…"),
-      );
+      lines.push(theme.fg("accent", theme.bold("You: ")) + truncateToWidth(userText, width - 5, "…"));
       lines.push("");
 
       // Assistant message rendered as markdown
@@ -599,10 +498,7 @@ export default function (pi: ExtensionAPI) {
 
     if (pendingQuestion) {
       const userText = pendingQuestion.trim().split("\n")[0];
-      lines.push(
-        theme.fg("accent", theme.bold("You: ")) +
-          truncateToWidth(userText, width - 5, "…"),
-      );
+      lines.push(theme.fg("accent", theme.bold("You: ")) + truncateToWidth(userText, width - 5, "…"));
 
       // Show tool calls inline
       if (pendingToolCalls.length > 0) {
@@ -691,10 +587,7 @@ export default function (pi: ExtensionAPI) {
     }
   }
 
-  async function resetThread(
-    ctx: ExtensionContext | ExtensionCommandContext,
-    persist = true,
-  ): Promise<void> {
+  async function resetThread(_ctx: ExtensionContext | ExtensionCommandContext, persist = true): Promise<void> {
     thread = [];
     pendingQuestion = null;
     pendingAnswer = "";
@@ -744,9 +637,7 @@ export default function (pi: ExtensionAPI) {
     syncOverlay();
   }
 
-  async function createSideSession(
-    ctx: ExtensionCommandContext,
-  ): Promise<SideSessionRuntime | null> {
+  async function createSideSession(ctx: ExtensionCommandContext): Promise<SideSessionRuntime | null> {
     if (!ctx.model) {
       return null;
     }
@@ -762,8 +653,7 @@ export default function (pi: ExtensionAPI) {
 
     const seedMessages = buildSeedMessages(ctx, thread);
     if (seedMessages.length > 0) {
-      session.agent.state.messages =
-        seedMessages as typeof session.agent.state.messages;
+      session.agent.state.messages = seedMessages as typeof session.agent.state.messages;
     }
 
     const unsubscribe = session.subscribe((event: AgentSessionEvent) => {
@@ -781,24 +671,18 @@ export default function (pi: ExtensionAPI) {
             pendingError = null;
           }
           setOverlayStatus(
-            event.type === "message_end"
-              ? "Finalizing side response..."
-              : "Streaming side response...",
+            event.type === "message_end" ? "Finalizing side response..." : "Streaming side response...",
             true,
           );
           return;
         }
         case "tool_execution_start": {
-          const toolName =
-            (event as { toolName?: string }).toolName ?? "unknown";
+          const toolName = (event as { toolName?: string }).toolName ?? "unknown";
           try {
             pendingToolCalls.push({
               toolCallId: (event as { toolCallId?: string }).toolCallId ?? "",
               toolName,
-              args: formatToolArgs(
-                toolName,
-                (event as { args?: unknown }).args,
-              ),
+              args: formatToolArgs(toolName, (event as { args?: unknown }).args),
               status: "running",
             });
           } catch {
@@ -808,15 +692,10 @@ export default function (pi: ExtensionAPI) {
           return;
         }
         case "tool_execution_end": {
-          const endToolName =
-            (event as { toolName?: string }).toolName ?? "unknown";
-          const tc = pendingToolCalls.find(
-            (t) => t.toolName === endToolName && t.status === "running",
-          );
+          const endToolName = (event as { toolName?: string }).toolName ?? "unknown";
+          const tc = pendingToolCalls.find((t) => t.toolName === endToolName && t.status === "running");
           if (tc) {
-            tc.status = (event as { isError?: boolean }).isError
-              ? "error"
-              : "done";
+            tc.status = (event as { isError?: boolean }).isError ? "error" : "done";
           }
           setOverlayStatus("Streaming side response...", true);
           return;
@@ -837,9 +716,7 @@ export default function (pi: ExtensionAPI) {
     };
   }
 
-  async function ensureSideSession(
-    ctx: ExtensionCommandContext,
-  ): Promise<SideSessionRuntime | null> {
+  async function ensureSideSession(ctx: ExtensionCommandContext): Promise<SideSessionRuntime | null> {
     if (!ctx.model) {
       return null;
     }
@@ -854,9 +731,7 @@ export default function (pi: ExtensionAPI) {
     return activeSideSession;
   }
 
-  async function ensureOverlay(
-    ctx: ExtensionCommandContext | ExtensionContext,
-  ): Promise<void> {
+  async function ensureOverlay(ctx: ExtensionCommandContext | ExtensionContext): Promise<void> {
     if (!ctx.hasUI) {
       return;
     }
@@ -942,18 +817,11 @@ export default function (pi: ExtensionAPI) {
         if (overlayRuntime === runtime) {
           overlayRuntime = null;
         }
-        notify(
-          ctx,
-          error instanceof Error ? error.message : String(error),
-          "error",
-        );
+        notify(ctx, error instanceof Error ? error.message : String(error), "error");
       });
   }
 
-  async function summarizeThread(
-    ctx: ExtensionContext,
-    items: BtwDetails[],
-  ): Promise<string> {
+  async function summarizeThread(ctx: ExtensionContext, items: BtwDetails[]): Promise<string> {
     const model = ctx.model;
     if (!model) {
       throw new Error("No active model selected.");
@@ -997,9 +865,7 @@ export default function (pi: ExtensionAPI) {
     }
   }
 
-  async function injectSummaryIntoMain(
-    ctx: ExtensionContext | ExtensionCommandContext,
-  ): Promise<void> {
+  async function injectSummaryIntoMain(ctx: ExtensionContext | ExtensionCommandContext): Promise<void> {
     if (thread.length === 0) {
       notify(ctx, "No BTW thread to summarize.", "warning");
       return;
@@ -1018,17 +884,11 @@ export default function (pi: ExtensionAPI) {
       await resetThread(ctx);
       notify(ctx, "Injected BTW summary into main chat.", "info");
     } catch (error) {
-      notify(
-        ctx,
-        error instanceof Error ? error.message : String(error),
-        "error",
-      );
+      notify(ctx, error instanceof Error ? error.message : String(error), "error");
     }
   }
 
-  async function closeOverlayFlow(
-    ctx: ExtensionContext | ExtensionCommandContext,
-  ): Promise<void> {
+  async function closeOverlayFlow(ctx: ExtensionContext | ExtensionCommandContext): Promise<void> {
     dismissOverlay();
     if (!ctx.hasUI) {
       return;
@@ -1038,19 +898,13 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    const choice = await ctx.ui.select("Close BTW:", [
-      "Keep side thread",
-      "Inject summary into main chat",
-    ]);
+    const choice = await ctx.ui.select("Close BTW:", ["Keep side thread", "Inject summary into main chat"]);
     if (choice === "Inject summary into main chat") {
       await injectSummaryIntoMain(ctx);
     }
   }
 
-  async function runBtwPrompt(
-    ctx: ExtensionCommandContext,
-    question: string,
-  ): Promise<void> {
+  async function runBtwPrompt(ctx: ExtensionCommandContext, question: string): Promise<void> {
     const model = ctx.model;
     if (!model) {
       setOverlayStatus("No active model selected.");
@@ -1127,10 +981,7 @@ export default function (pi: ExtensionAPI) {
     }
   }
 
-  async function submitFromOverlay(
-    ctx: ExtensionContext | ExtensionCommandContext,
-    rawValue: string,
-  ): Promise<void> {
+  async function submitFromOverlay(ctx: ExtensionContext | ExtensionCommandContext, rawValue: string): Promise<void> {
     const question = rawValue.trim();
     if (!question) {
       setOverlayStatus("Enter a question first.");
@@ -1139,9 +990,7 @@ export default function (pi: ExtensionAPI) {
 
     setOverlayDraft("");
     if (!("waitForIdle" in ctx)) {
-      setOverlayStatus(
-        "BTW submit requires command context. Re-open with /btw.",
-      );
+      setOverlayStatus("BTW submit requires command context. Re-open with /btw.");
       return;
     }
 
@@ -1149,17 +998,13 @@ export default function (pi: ExtensionAPI) {
   }
 
   pi.registerCommand("btw", {
-    description:
-      "Open a simple BTW side-chat popover. `/btw <text>` asks immediately, `/btw` opens the side thread.",
+    description: "Open a simple BTW side-chat popover. `/btw <text>` asks immediately, `/btw` opens the side thread.",
     handler: async (args, ctx) => {
       const question = args.trim();
 
       if (!question) {
         if (thread.length > 0 && ctx.hasUI) {
-          const choice = await ctx.ui.select("BTW side chat:", [
-            "Continue previous conversation",
-            "Start fresh",
-          ]);
+          const choice = await ctx.ui.select("BTW side chat:", ["Continue previous conversation", "Start fresh"]);
           if (choice === "Continue previous conversation") {
             // Dispose session so it's recreated with fresh main context on next submit
             await disposeSideSession();
