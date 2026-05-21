@@ -429,7 +429,8 @@ class ManagementDialog implements Component {
     const leftPad = Math.floor((width - boxWidth) / 2);
     const rightPad = Math.max(0, width - boxWidth - leftPad);
     const innerWidth = Math.max(20, boxWidth - 2);
-    const maxRows = Math.max(12, Math.min(process.stdout.rows ?? 28, 32));
+    const terminalRows = this.tui.terminal.rows || process.stdout.rows || 28;
+    const maxRows = Math.max(12, Math.min(terminalRows, 32));
     const listHeight = Math.max(4, maxRows - 9);
     const lines: string[] = [];
 
@@ -605,7 +606,6 @@ export default function managementExtension(pi: ExtensionAPI) {
             // pi-tui overlay compositing drifting when the overlay's left edge cuts
             // through a CJK wide character in the underlying main window.
             width: "100%",
-            maxHeight: "86%",
             anchor: "center",
           },
         },
