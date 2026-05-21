@@ -333,10 +333,13 @@ class BtwOverlay extends Container implements Focusable {
     return this.input.getValue();
   }
 
+  private padLine(content: string, width: number): string {
+    const truncated = truncateToWidth(content, width, "");
+    return `${truncated}${" ".repeat(Math.max(0, width - visibleWidth(truncated)))}`;
+  }
+
   private frameLine(content: string, innerWidth: number): string {
-    const truncated = truncateToWidth(content, innerWidth, "");
-    const padding = Math.max(0, innerWidth - visibleWidth(truncated));
-    return `${this.theme.fg("borderMuted", "│")}${truncated}${" ".repeat(padding)}${this.theme.fg("borderMuted", "│")}`;
+    return `${this.theme.fg("borderMuted", "│")}${this.padLine(content, innerWidth)}${this.theme.fg("borderMuted", "│")}`;
   }
 
   private borderLine(innerWidth: number, edge: "top" | "bottom"): string {
@@ -346,8 +349,10 @@ class BtwOverlay extends Container implements Focusable {
   }
 
   override render(width: number): string[] {
-    const dialogWidth = Math.max(56, Math.min(width, Math.floor(width * 0.9)));
-    const innerWidth = Math.max(40, dialogWidth - 2);
+    const dialogWidth = Math.min(width, Math.max(Math.min(width, 56), Math.floor(width * 0.72)));
+    const leftPad = Math.floor((width - dialogWidth) / 2);
+    const rightPad = Math.max(0, width - dialogWidth - leftPad);
+    const innerWidth = Math.max(1, dialogWidth - 2);
     const terminalRows = process.stdout.rows ?? 30;
     const overlayMaxHeight = Math.max(8, Math.floor(terminalRows * 0.78));
     const dialogHeight = Math.min(30, overlayMaxHeight);
@@ -395,7 +400,7 @@ class BtwOverlay extends Container implements Focusable {
     }
     lines.push(this.borderLine(innerWidth, "bottom"));
 
-    return lines;
+    return lines.map((line) => `${" ".repeat(leftPad)}${this.padLine(line, dialogWidth)}${" ".repeat(rightPad)}`);
   }
 }
 
@@ -798,11 +803,12 @@ export default function (pi: ExtensionAPI) {
         {
           overlay: true,
           overlayOptions: {
-            width: "80%",
-            minWidth: 72,
+            // Full-width overlay prevents pi-tui from cutting the overlay's left
+            // edge through CJK wide characters in the underlying main window.
+            width: "100%",
             maxHeight: "78%",
             anchor: "top-center",
-            margin: { top: 1, left: 2, right: 2 },
+            margin: { top: 1 },
           },
           onHandle: (handle) => {
             runtime.handle = handle;

@@ -425,7 +425,10 @@ class ManagementDialog implements Component {
   }
 
   render(width: number): string[] {
-    const innerWidth = Math.max(20, width - 2);
+    const boxWidth = Math.max(Math.min(width, 64), Math.floor(width * 0.86));
+    const leftPad = Math.floor((width - boxWidth) / 2);
+    const rightPad = Math.max(0, width - boxWidth - leftPad);
+    const innerWidth = Math.max(20, boxWidth - 2);
     const maxRows = Math.max(12, Math.min(process.stdout.rows ?? 28, 32));
     const listHeight = Math.max(4, maxRows - 9);
     const lines: string[] = [];
@@ -445,7 +448,7 @@ class ManagementDialog implements Component {
     lines.push(this.frameLine(this.renderSummary(), innerWidth));
     lines.push(this.borderLine(innerWidth, "bottom"));
 
-    return lines;
+    return lines.map((line) => `${" ".repeat(leftPad)}${padAnsi(line, boxWidth)}${" ".repeat(rightPad)}`);
   }
 
   private switchTab(direction: 1 | -1): void {
@@ -598,8 +601,10 @@ export default function managementExtension(pi: ExtensionAPI) {
         {
           overlay: true,
           overlayOptions: {
-            width: "86%",
-            minWidth: 64,
+            // Use a full-width overlay and center the dialog internally. This avoids
+            // pi-tui overlay compositing drifting when the overlay's left edge cuts
+            // through a CJK wide character in the underlying main window.
+            width: "100%",
             maxHeight: "86%",
             anchor: "center",
           },
