@@ -1,5 +1,9 @@
 import { CustomEditor, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { Key, matchesKey, truncateToWidth } from "@earendil-works/pi-tui";
+import { Key, type KeyId, matchesKey, truncateToWidth } from "@earendil-works/pi-tui";
+
+const IS_MACOS = process.platform === "darwin";
+const STASH_KEYS: readonly KeyId[] = IS_MACOS ? [Key.super("s"), Key.ctrl("s")] : [Key.ctrl("s")];
+const RESTORE_KEYS: readonly KeyId[] = IS_MACOS ? [Key.super(Key.up), Key.ctrl("r")] : [Key.ctrl(Key.up)];
 
 const STATE_ENTRY_TYPE = "water-prompt-stash-state";
 const WIDGET_KEY = "prompt-stash";
@@ -17,6 +21,10 @@ function formatPreview(prompt: string): string {
     .replace(/\t/gu, "⇥");
 
   return chars.length > PREVIEW_LENGTH ? `${preview}…` : preview;
+}
+
+function matchesAnyKey(data: string, keys: readonly KeyId[]): boolean {
+  return keys.some((key) => matchesKey(data, key));
 }
 
 function restoreState(ctx: ExtensionContext): string | undefined {
@@ -55,7 +63,7 @@ class PromptStashEditor extends CustomEditor {
   }
 
   override handleInput(data: string): void {
-    if (matchesKey(data, Key.ctrl("s"))) {
+    if (matchesAnyKey(data, STASH_KEYS)) {
       const currentPrompt = this.getExpandedText();
       if (currentPrompt.length === 0) return;
 
@@ -65,7 +73,7 @@ class PromptStashEditor extends CustomEditor {
       return;
     }
 
-    if (matchesKey(data, Key.ctrl(Key.up))) {
+    if (matchesAnyKey(data, RESTORE_KEYS)) {
       const prompt = this.getStashedPrompt();
       if (!prompt || this.getExpandedText().length > 0) return;
 
